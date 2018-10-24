@@ -1,0 +1,34 @@
+﻿@{
+    ViewBag.Title = "主页";
+}
+
+<div class="jumbotron row" style="background-color: #000000; color: #eeeeee">
+    <div class="col-md-6">
+        <h1>Location Spy</h1>
+        <p class="lead">Location Spy 是一个仅供学习参考的地理定位器实现，它出于一个好友的紧急需求而快速开发，它基于 ASP.NET 及 SquirrelFramework 搭建，你可以在这里查看代码。</p>
+        <p>
+            <a href="https://github.com/imnista" class="btn btn-primary btn-lg">GitHub &raquo;</a>
+        </p>
+    </div>
+    <div class="col-md-6">
+        <script type="text/javascript" src="//rf.revolvermaps.com/0/0/6.js?i=5u1bmvgwv0r&amp;m=1c&amp;c=9d8b63&amp;cr1=ffffff&amp;f=arial&amp;l=1&amp;bv=80&amp;cw=f00000&amp;cb=000000" async="async"></script>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <h2>定位器</h2>
+        <p>开始创建一个定位器，只要用户访问了由定位器所创建的地址，便可一次性获取用户点击此地址时所在的位置。不过需要注意，如果用户没有在点击此地址后允许获取地理位置，则只能获取用户的粗略位置信息。</p>
+        <p>@Html.ActionLink("进入定位器", "Index", "Locator", new { @class = "btn btn-danger" })</p>
+    </div>
+    <div class="col-md-4">
+        <h2>跟踪器</h2>
+        <p>开始创建一个跟踪器，只要用户持续访问（不关闭此页面）由跟踪器所创建的地址，便可持续获取用户所在的位置。不过需要注意，如果用户没有在点击此地址后允许获取地理位置，则无法进行有效的持续跟踪</p>
+        <p>@Html.ActionLink("进入跟踪器", "Index", "Tracker", new { @class = "btn btn-warning" })</p>
+    </div>
+    <div class="col-md-4">
+        <h2>其它</h2>
+        <p>我还没想好做啥呢</p>
+        <p>@Html.ActionLink("点击没用", "Index", "Home", new { @class = "btn btn-info" })</p>
+    </div>
+</div>

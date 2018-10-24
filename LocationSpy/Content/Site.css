@@ -1,0 +1,146 @@
+﻿body {
+    padding-bottom: 20px;
+    padding-top: 50px;
+}
+
+a {
+    cursor: pointer;
+}
+
+select {
+    min-width: 200px;
+}
+
+.error-container {
+    margin: 10px;
+}
+
+.text-danger {
+    color: #ff0000;
+    font-weight: normal;
+}
+
+/* Set padding to keep content from hitting the edges */
+
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Override the default bootstrap behavior where horizontal description lists
+   will truncate terms that are too long to fit in the left column
+*/
+
+.dl-horizontal dt {
+    white-space: normal;
+}
+
+/* Set width on the form input elements since they're 100% wide by default */
+
+input,
+select {
+    max-width: 380px;
+}
+
+textarea {
+    border: none;
+    border-bottom: 1px solid #555;
+    color: #000000;
+    font-size: 14px;
+    height: 80px;
+    outline: none;
+    padding: 0 10px;
+    width: 350px;
+}
+
+.unresizable {
+    resize: none;
+}
+
+input[type=text] {
+    border: none;
+    border-bottom: 1px solid #555;
+    color: #000000;
+    font-size: 14px;
+    height: 35px;
+    outline: none;
+    padding: 0 10px;
+    width: 350px;
+}
+
+input[type=url] {
+    border: none;
+    border-bottom: 1px solid #555;
+    color: #000000;
+    font-size: 14px;
+    height: 35px;
+    outline: none;
+    padding: 0 10px;
+    width: 350px;
+}
+
+.required {
+    color: #ff0000;
+    font-weight: bolder;
+    margin: 0 0 0 5px;
+}
+
+.ellipsis {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* For animation of flicking, working with global.js renderFlicker() */
+.flicker {
+    visibility: hidden;
+}
+
+.none-selection {
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.disabled {
+    background-color: #808080;
+    cursor: default;
+}
+
+.inline {
+    display: inline-block !important;
+}
+
+.grid-table {
+    margin: 25px 10px;
+    width: 100%;
+}
+
+    .grid-table tr:hover {
+        background-color: #0000ff !important;
+        color: #ffffff;
+    }
+
+    .grid-table tr:nth-child(even) {
+        background-color: #f0f0f0;
+    }
+
+    .grid-table tr:nth-child(odd) {
+        background-color: #ffffff;
+    }
+
+    .grid-table thead {
+        border-top: 1px solid #000000;
+        border-bottom: 1px solid #000000;
+    }
+
+    .grid-table th {
+        padding: 10px 10px;
+        font-weight: bold;
+    }
+
+    .grid-table td {
+        padding: 5px 10px;
+    }

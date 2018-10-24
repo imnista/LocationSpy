@@ -1,0 +1,126 @@
+﻿@{
+    ViewBag.Title = "主页";
+}
+@model LocatorItem
+
+<div class="jumbotron row" style="background-color: #000000; color: #eeeeee">
+    <div class="col-md-4">
+        <h1>新建定位器</h1>
+        <p>如果用户访问了由定位器所创建的地址，便可一次性获取用户点击此地址时所在的位置。不过需要注意，如果用户没有在点击此地址后允许获取地理位置，则只能获取用户的粗略位置信息。</p>
+        <p>你可以在<b><a href="#list">下方</a></b>查看最近已创建的定位记录</p>
+    </div>
+    <div class="col-md-1"></div>
+    <div class="col-md-7">
+        @using (Html.BeginForm("Submit", "Locator", FormMethod.Post))
+        {
+            @Html.ValidationSummary(true, "", new { @class = "error-container text-danger" })
+
+            @Html.LabelFor(m => m.Name)<span class="required">*</span>
+            <br />
+            @Html.TextBoxFor(m => m.Name, new { placeholder = "比如: 张三在跟踪媳妇儿" })
+            @Html.ValidationMessageFor(m => m.Name, "", new { @class = "error-container text-danger" })
+            <br />
+
+            <br />
+            @Html.LabelFor(m => m.RedirectUrl)<span class="required">*</span>
+            <br />
+            @Html.TextBoxFor(m => m.RedirectUrl, new { type = "url", placeholder = "比如: http://www.cqcb.com/reading/2018-10-18/1163892_pc.html" })
+            @Html.ValidationMessageFor(m => m.RedirectUrl, "", new { @class = "error-container text-danger" })
+            <br />
+
+            <br />
+            @Html.LabelFor(m => m.RedirectTitle)
+            <br />
+            @Html.TextBoxFor(m => m.RedirectTitle, new { placeholder = "比如: 一张图告诉你，男人到底在想什么?" })
+            @Html.ValidationMessageFor(m => m.RedirectTitle, "", new { @class = "error-container text-danger" })
+            <input id="loadSuggestTitle" class="btn btn-warning btn-sm" type="button" value="自动获取重定向标题" />
+            <br />
+            <br />
+            <br />
+            <input type="submit" id="submit" class="btn btn-danger btn-lg" style="float: left" value="创建 &raquo;" />
+            <p>@Html.ActionLink("取消", "Index", "Home", null, new { @class = "btn btn-info", style = "float: right;" })</p>
+        }
+    </div>
+</div>
+
+<a id="list"></a>
+<div class="row">
+    <div class="col-md-12">
+        <h3>定位记录 Top 30</h3>
+        <a id="clear-all-items" class="btn btn-danger btn-sm">清空全部记录</a>
+        &nbsp;
+        @Html.ActionLink("返回主页", "Index", "Home", null, new { @class = "btn btn-warning btn-sm" })
+        <table class="grid-table">
+            <thead>
+                <tr>
+                    <th>项目名</th>
+                    <th>状态</th>
+                    <th>IP 地址</th>
+                    <th>GPS 经纬位置 (Longitude, Latitude)</th>
+                    <th>定位信息</th>
+                    <th>目标当前平台</th>
+                    <th>最后更新时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (LocatorItem item in ViewBag.Top30Items)
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        <td>@item.Status.Description()</td>
+                        <td>@item.IPAddress</td>
+                        <td>
+                            @(item.Location == null ? "" : $"{item.Location.Longitude}, {item.Location.Latitude}")
+                        </td>
+                        <td>@item.AuxiliaryLocationInformation</td>
+                        <td>@item.PlatformType.Description()</td>
+                        <td>@item.LastModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td>
+                            @Html.ActionLink("查看", "Detail", "Locator", new { id = item.Identifier }, new { @class = "btn btn-info btn-xs" })
+                            @*&nbsp;
+                                @Html.ActionLink("删除", "Delete", "Locator", new { id = item.Identifier }, new { @class = "btn btn-danger btn-xs" })*@
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section scripts
+{
+    <script>
+        $(function() {
+            $("#loadSuggestTitle").bind("click",
+                function() {
+                    var url = $("#RedirectUrl").val();
+                    if (url) {
+                        $.ajax({
+                            type: "GET",
+                            dataType: "json",
+                            cache: false,
+                            url: '/locator/suggesttitle?url=' + url,
+                            success: function(data) {
+                                if (data.status === 0 || data.title === "") {
+                                    $("#RedirectTitle").val(data.title);
+                                } else {
+                                    alert("无法自动获取标题");
+                                }
+                            }
+                        });
+                    } else {
+                        alert("请先输入有效的用户重定向网址");
+                    }
+                });
+
+            $("#clear-all-items").bind("click",
+                function() {
+                    var passphrase = prompt("你确定要删除所有数据吗？操作将不可恢复！确认请输入密码", "");
+                    if (passphrase) {
+                        window.location.href = "/Locator/Clear?passphrase=" + passphrase;
+                    }
+                });
+        });
+    </script>
+}

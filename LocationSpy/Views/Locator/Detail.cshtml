@@ -1,0 +1,318 @@
+﻿@{
+    ViewBag.Title = "主页";
+}
+<style>
+    .recording-area {
+        float: right;
+        font-size: 20px;
+        height: 30px;
+        line-height: 30px;
+        margin: 25px 0 0;
+        width: 120px;
+    }
+
+    .recording {
+        color: #ff0000;
+        font-size: 27px;
+        line-height: 30px;
+        vertical-align: middle;
+    }
+
+    .item-value {
+        font-weight: bold;
+        padding: 0 0 0 20px;
+    }
+
+    #item-name { }
+
+    #item-status {
+        font-size: 25px;
+        font-weight: bold;
+    }
+
+    #map-body {
+        /*min-height: 600px;*/
+        background: #ffffff;
+        height: 500px;
+        /*position: absolute;*/
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        /*z-index: 100;*/
+    }
+
+    #map-location-picker {
+        background: #000000;
+        bottom: 0;
+        height: 50px;
+        line-height: 50px;
+        margin: 0;
+        padding: 0 0 0 20px;
+        position: absolute;
+        width: 100%;
+        z-index: 100;
+    }
+</style>
+@section scripts{
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=ApKIqsFC7SOAAxNDyoIQ9REooRHh608v"></script>
+    <script>
+        $(function() {
+            var id = "@ViewBag.Id";
+
+            $("#item-currenturl").val(window.location.href);
+            $("#item-targeturl").val(window.origin + "/visit?id=" + id);
+
+            $("#copyCurrentUrl").on("click",
+                function() {
+                    copyInputToClipboard("item-currenturl");
+                });
+
+            $("#copyTargetUrl").on("click",
+                function() {
+                    copyInputToClipboard("item-targeturl");
+                });
+
+            $("#item-location").on("click",
+                function() {
+                    if (window.targetMarker) {
+                        map.setZoom(18);
+                        map.panTo(window.targetMarker.point);
+                    }
+                });
+
+            renderFlicker();
+            renderLoading("loading-animation");
+            check();
+            initializeMap();
+            setInterval(check, 10000);
+
+            function check() {
+                $.ajax({
+                    type: "GET",
+                    dataType: "json",
+                    cache: false,
+                    url: '/locator/check?id=' + id,
+                    success: function(model) {
+                        $("#item-name").text(model.Name);
+                        $("#item-name").attr("title", model.Name);
+                        
+                        if (model.IPAddress) {
+                            $("#item-ipaddress").text(model.IPAddress);
+                            $("#item-ipaddress").attr("href", "https://ip.cn/index.php?ip=" + model.IPAddress);
+                            $("#item-ipaddress").attr("target", "_blank");
+                        } else {
+                            $("#item-ipaddress").text("未知");
+                        }
+
+                        if (model.Location) {
+                            $("#item-location").text(
+                                model.Location.Longitude +
+                                ", " +
+                                model.Location.Latitude);
+
+                            showTargeOnMap(
+                                model.Location.Longitude,
+                                model.Location.Latitude);
+                        } else {
+                            $("#item-location").text("未知");
+                        }
+
+                        if (model.AuxiliaryLocationInformation) {
+                            $("#item-auxiliarylocationinformation").text(
+                                model.AuxiliaryLocationInformation);
+                        } else {
+                            $("#item-auxiliarylocationinformation").text("未知");
+                        }
+
+                        $("#item-lastmodifiedtime").text(
+                            MicrosoftJsonDateFormatStringToTimeInMillis(model.LastModifiedTime)
+                            .Format("yyyy-MM-dd hh:mm:ss")
+                        );
+
+                        // Get Status
+                        var statusText = "@CurrentStatus.Unknown.Description()";
+                        switch (model.Status) {
+                        case 100:
+                            statusText = '<span style="color: #ffff00">@CurrentStatus.NotReady.Description()</span>';
+                            break;
+                        case 201:
+                            statusText = '<span style="color: #00ff00">@CurrentStatus.FoundByGPS.Description()</span>';
+                            break;
+                        case 202:
+                            statusText =
+                                '<span style="color: #00ff00">@CurrentStatus.FoundByIPAddress.Description()</span>';
+                            break;
+                        case 404:
+                            statusText = '<span style="color: #ff0000">@CurrentStatus.NotFound.Description()</span>';
+                            break;
+                        case 400:
+                            statusText = '<span style="color: #ff0000">@CurrentStatus.Unknown.Description()</span>';
+                            break;
+                        }
+                        $("#item-status").html(statusText);
+
+                        // Get Platform
+                        var platformText = "@PlatformType.Unknown.Description()";
+                        switch (model.PlatformType) {
+                        case 1:
+                            platformText = '@PlatformType.Windows.Description()';
+                            break;
+                        case 2:
+                            platformText = '@PlatformType.Apple.Description()';
+                            break;
+                        case 3:
+                            platformText = '@PlatformType.Android.Description()';
+                            break;
+                        }
+                        $("#item-platform").html(platformText);
+
+                    },
+                    error: function() {}
+                });
+            }
+
+            function showTargeOnMap(longitude, latitude) {
+                if (window.targetMarker) {
+                    map.removeOverlay(window.targetMarker);
+                }
+                var point = new BMap.Point(longitude, latitude);
+                var myIcon = new BMap.Icon("/content/image/map_target_30x36.png",
+                    new BMap.Size(30, 36),
+                    {
+                        offset: new BMap.Size(15, 36)
+                    });
+
+                window.targetMarker = new BMap.Marker(point, { icon: myIcon });
+
+                map.addOverlay(targetMarker);
+                map.setZoom(18);
+                map.panTo(point);
+            }
+
+            function initializeMap() {
+                window.map = new BMap.Map("map-body"
+                    //,
+                    //{
+                    //enableMapClick: false
+                    //}
+                );
+                map.setMapStyle({ style: 'midnight' }); // bluish
+                var point = new BMap.Point(121.618622, 38.914589);
+                map.centerAndZoom(point, 15);
+                map.enableScrollWheelZoom();
+                map.enableContinuousZoom();
+                map.enableInertialDragging();
+                exeCurrentLocation(markMe);
+
+                //map.addControl(new BMap.NavigationControl({ type: BMAP_NAVIGATION_CONTROL_ZOOM }));
+                //map.addControl(new BMap.OverviewMapControl());
+                map.addControl(new BMap.MapTypeControl());
+
+                // Event List
+                // http://lbsyun.baidu.com/cms/jsapi/reference/jsapi_reference.html#a0b0
+                // click
+                map.addEventListener("mousemove",
+                    function(e) {
+                        if (e.point) {
+                            document.getElementById("current-map-gps").innerHTML = e.point.lng + "," + e.point.lat;
+                        }
+                    });
+                //window.drawingManager = new BMapLib.DrawingManager(map, {
+                //    // 使用鼠标工具需要引入鼠标工具开源库DrawingManager_min.js及样式文件DrawingManager_min.css
+                //    isOpen: false, // 是否开启绘制模式
+                //    enableDrawingTool: true, // 是否显示工具栏
+                //    drawingToolOptions: {
+                //        anchor: BMAP_ANCHOR_TOP_RIGHT, // 位置
+                //        offset: new BMap.Size(40, 10), // 偏离值
+                //        scale: 0.8, // 工具栏缩放比例
+                //        drawingModes: [BMAP_DRAWING_MARKER],
+                //        enableCalculate: false
+                //    }
+                //});
+            }
+
+            function markMe(latitude, longitude) {
+                //if (window.meMarker) {
+                //    map.removeOverlay(window.meMarker);
+                //}
+                var point = new BMap.Point(longitude, latitude);
+                //var myIcon = new BMap.Icon("/content/image/map_me_30x36.png",
+                //    new BMap.Size(30, 36),
+                //    {
+                //        offset: new BMap.Size(15, 36)
+                //    });
+
+                //window.meMarker = new BMap.Marker(point, { icon: myIcon });
+
+                //map.addOverlay(meMarker);
+                map.setZoom(15);
+                map.panTo(point);
+            }
+
+        });
+    </script>
+}
+
+<div class="row" style="background-color: #000000; color: #eeeeee">
+    <div class="col-md-3">
+        <h2 id="item-name" class="ellipsis"></h2>
+        <span id="item-status">未知</span>
+
+        <h4>目标当前使用平台</h4>
+        <div class="item-value" id="item-platform">未知</div>
+
+        <h4>目标 IP 地址</h4>
+        <a class="item-value" id="item-ipaddress">未知</a>
+
+        <h4>目标 GPS 经纬坐标</h4>
+        <a class="item-value" id="item-location">未知</a>
+
+        <h4>最后获取时间</h4>
+        <div class="item-value" id="item-lastmodifiedtime">未知</div>
+
+        <h4>定位信息</h4>
+        <div class="item-value" id="item-auxiliarylocationinformation">未知</div>
+
+        <br/>
+
+        <h6>
+            * 用户访问对应地址后，如果用户没有在点击此地址后允许获取地理位置，则只能获取用户的粗略位置信息。
+        </h6>
+
+        <br/>
+
+        <p>@Html.ActionLink("返回主页", "Index", "Home", null, new {@class = "btn btn-info"})</p>
+    </div>
+    <div class="col-md-9" style="margin: 15px 0 0;">
+
+        <div class="row">
+            <div class="col-md-9">
+                <div>
+                    <label style="line-height: 34px;">此地址给对方</label>
+                    <input id="item-targeturl" type="url" readonly="readonly" style="background-color: cornsilk; margin: 3px 10px;"/>
+                    <input id="copyTargetUrl" class="btn btn-warning btn-sm" type="button" value="复制"/>
+                </div>
+                <div>
+                    <label style="line-height: 34px;">当前页面地址</label>
+                    <input id="item-currenturl" type="url" readonly="readonly" style="background-color: #f8f8ff; margin: 3px 10px;"/>
+                    <input id="copyCurrentUrl" class="btn btn-warning btn-sm" type="button" value="复制"/>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <span class="recording-area">
+                    <span class="flicker recording">◉</span>
+                    侦测中 <span id="loading-animation"></span>
+                </span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12" style="margin: 15px 0 0; padding: 0">
+                <div id="map-body"></div>
+                <div id="map-location-picker">
+                    GPS (Longitude, Latitude)&nbsp;
+                    <span id="current-map-gps" readonly="readonly">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
